@@ -7,21 +7,21 @@ The environment includes a fully private EC2 instance reachable only through an 
 
 What this project demonstrates
 
-End-to-end VPC design using Terraform
+ - End-to-end VPC design using Terraform
 
-Segregation of public and private subnets across Availability Zones
+ - Segregation of public and private subnets across Availability Zones
 
-Secure outbound access from private workloads via a NAT Gateway
+ - Secure outbound access from private workloads via a NAT Gateway
 
-Internet-facing ALB with restricted backend communication
+ - Internet-facing ALB with restricted backend communication
 
-Privately hosted Ubuntu EC2 running Nginx (no public exposure)
+ - Privately hosted Ubuntu EC2 running Nginx (no public exposure)
 
-Strict security group rules for ingress and egress
+ - Strict security group rules for ingress and egress
 
-Use of AWS-managed services like GuardDuty, S3 (for logs), and IAM roles
+ - Use of AWS-managed services like GuardDuty, S3 (for logs), and IAM roles
 
-Clear tagging and structure for easy auditing and cost tracking
+ - Clear tagging and structure for easy auditing and cost tracking
 
 This setup reflects real-world patterns commonly used in secure cloud environments and is suitable for learning, demonstrations, portfolio building, or as a starting point for more advanced security automation.
 
