@@ -14,6 +14,23 @@ provider "aws" {
   profile = var.aws_profile
 }
 
+# -----------------------------
+# Ubuntu AMI (22.04 LTS) lookup
+# -----------------------------
+data "aws_ami" "ubuntu_2204" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
 
 # -----------------------------
 # VPC
@@ -31,7 +48,7 @@ resource "aws_vpc" "main" {
 }
 
 # -----------------------------
-# Public Subnet
+# Public Subnets
 # -----------------------------
 
 resource "aws_subnet" "public" {
@@ -194,6 +211,42 @@ resource "aws_security_group" "alb_sg" {
 }
 
 # -----------------------------
+# Security Group for private EC2
+# -----------------------------
+
+resource "aws_security_group" "ec2_sg" {
+  name        = "cloudsec-ec2-sg"
+  description = "Allow HTTP only from ALB; outbound only inside VPC"
+  vpc_id      = aws_vpc.main.id
+
+  # Inbound: ONLY ALB can talk to EC2 on port 80
+  ingress {
+    description     = "HTTP from ALB only"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  # Outbound: allow only HTTP/HTTPS to anywhere
+  egress {
+    description = "Allow HTTP outbound"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow HTTPS outbound"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# -----------------------------
 # Application Load Balancer (ALB)
 # -----------------------------
 
@@ -213,19 +266,65 @@ resource "aws_lb" "alb" {
   }
 }
 
-# Listener: simple HTTP fixed response
+# Target Group for EC2
+resource "aws_lb_target_group" "tg" {
+  name     = "cloudsec-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    path = "/"
+    port = "traffic-port"
+  }
+
+  tags = {
+    Name    = "cloudsec-tg"
+    Project = "aws-secure-vpc-terraform"
+  }
+}
+
+# Listener: forward HTTP to target group
 resource "aws_lb_listener" "http_listener" {
   load_balancer_arn = aws_lb.alb.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = "fixed-response"
-
-    fixed_response {
-      content_type = "text/plain"
-      message_body = "CloudSec ALB is working"
-      status_code  = "200"
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tg.arn
   }
+}
+
+# -----------------------------
+# EC2 Instance in Private Subnet (Ubuntu)
+# -----------------------------
+
+resource "aws_instance" "private_ec2" {
+  ami                         = data.aws_ami.ubuntu_2204.id
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.private.id
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  associate_public_ip_address = false
+
+  user_data = <<EOF
+#!/bin/bash
+apt-get update -y
+apt-get install -y nginx
+systemctl enable nginx
+systemctl start nginx
+echo "Hello from Private Ubuntu EC2 (secure behind ALB)" > /var/www/html/index.html
+EOF
+
+  tags = {
+    Name    = "cloudsec-private-ec2"
+    Project = "aws-secure-vpc-terraform"
+  }
+}
+
+# Attach EC2 instance to target group
+resource "aws_lb_target_group_attachment" "tg_attachment" {
+  target_group_arn = aws_lb_target_group.tg.arn
+  target_id        = aws_instance.private_ec2.id
+  port             = 80
 }
