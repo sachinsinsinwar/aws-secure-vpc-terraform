@@ -1,19 +1,29 @@
-# AWS Secure VPC - Terraform Project
+AWS Secure VPC — Terraform Project
 
-This project builds a secure AWS VPC using Terraform as part of my cloud security learning path.
+This repository contains a hands-on implementation of a secure AWS networking setup built entirely with Terraform.
+The goal of this project is to design and deploy a production-style VPC layout while reinforcing core cloud security concepts such as network isolation, least privilege, controlled egress, and secure load balancing.
 
+The environment includes a fully private EC2 instance reachable only through an Application Load Balancer, along with properly segmented subnets, routing, and security groups. Everything is provisioned as Infrastructure-as-Code to ensure consistency, visibility, and repeatability.
 
-It includes:
+What this project demonstrates
 
-- A dedicated VPC
-- Public and private subnets
-- Internet Gateway and NAT Gateway
-- Route tables and security groups
-- Application Load Balancer (ALB)
-- Encrypted S3 bucket for logs
-- GuardDuty for threat detection (configured in AWS)
+End-to-end VPC design using Terraform
 
-All infrastructure changes are defined as code using Terraform.
+Segregation of public and private subnets across Availability Zones
+
+Secure outbound access from private workloads via a NAT Gateway
+
+Internet-facing ALB with restricted backend communication
+
+Privately hosted Ubuntu EC2 running Nginx (no public exposure)
+
+Strict security group rules for ingress and egress
+
+Use of AWS-managed services like GuardDuty, S3 (for logs), and IAM roles
+
+Clear tagging and structure for easy auditing and cost tracking
+
+This setup reflects real-world patterns commonly used in secure cloud environments and is suitable for learning, demonstrations, portfolio building, or as a starting point for more advanced security automation.
 
 Architecture Overview
 
